@@ -160,14 +160,14 @@ function buildObsceneReply(array $message): string
 
 function buildSynonymResponse(string $inputText, string $originalText, string $from): array
 {
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: {$inputText}\n", 3, __DIR__.'/1test.log');
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: {$inputText}\n", 3, __DIR__.'/1test.log');
     $synonymData = getSyn($inputText);
     $normalizedText = $inputText;
 
     if (($synonymData['state'] ?? 0) === 2) {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "юзаем спелл", 3, __DIR__.'/1test.log');
+//error_log(date( 'd-m-y H:i') . ' ' . __LINE__ . ' ' . "юзаем спелл", 3, __DIR__.'/1test.log');
         $spell = mb_strtolower(checkSpell($inputText));
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: {$spell}\n", 3, __DIR__.'/1test.log');
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: {$spell}\n", 3, __DIR__.'/1test.log');
         if (!empty($spell)) {
             $normalizedText = $spell;
             $synonymData = getSyn($normalizedText);
@@ -288,7 +288,7 @@ function processMessage($message) {
 
     $response = buildSynonymResponse($inputText, $originalText, $from);
     send($chat_id, $response['text'], $response['menu']);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "send ".strlen($response['text']).' символов', 3, __DIR__.'/1test.log');
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . " send ".strlen($response['text']).' символов', 3, __DIR__.'/1test.log');
 
     if (isset($message['text'])) {
         $suggest = $response['state'] === 1 ? $response['suggest'] : null;
@@ -359,12 +359,12 @@ function getSyn($text)
     if (!empty($arr)) {
         return array('arr' => unserialize($arr), 'state' => 1);
     }
-error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова нет. вызываем парсер со словом $text \n", 3, "1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова нет. вызываем парсер со словом $text \n", 3, "1test.log");
     unset($html);
     unset($arr);
 //    $arr = parsingZkir($text);
     $arr = parsingSinonim_org($text);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ parsingZkir: ".sizeof($arr)."\n", 3, "1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ словаря: ".sizeof($arr)."\n", 3, "1test.log");
     if (empty($arr))
     {
         $state = 2; // === то ли slova.zkir.ru в дауне, то ли юзер прислал хуйню ===
@@ -482,7 +482,8 @@ function parsingZkir(string $word): array {
  *
  */
 function parsingSinonim_org($inputText = '') {
-    $url = 'http://sinonim.org/s/'.$inputText;
+    $url = 'http://sinonim.org/s/'.urlencode($inputText);
+
 
     $ch = curl_init();
     curl_setopt_array($ch, [

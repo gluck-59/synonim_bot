@@ -11,8 +11,8 @@ ini_set('default_charset', 'utf-8');
 $host = 'localhost';
 $db = 'synonim';
 $charset = 'utf8';
-$user = 'root'; // юзер с ограниченными правами для уменьшения checking_permissions
-$pass = 'NhbUdjplz';
+$user = $env['DB_USER'];
+$pass = $env['DB_PASS'];
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $opt = array(

@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a5671acf-39af-4fa6-816e-ad90a8a9508d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/php.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+    <list default="true" id="a5671acf-39af-4fa6-816e-ad90a8a9508d" name="Changes" comment="[]">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pdo.php" beforeDir="false" afterPath="$PROJECT_DIR$/pdo.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/synonim_bot.php" beforeDir="false" afterPath="$PROJECT_DIR$/synonim_bot.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -39,6 +37,8 @@
     </configuration>
   </component>
   <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
+    <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="[]" />
     <option name="LAST_COMMIT_MESSAGE" value="[]" />
   </component>
