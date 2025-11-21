@@ -281,7 +281,7 @@ function getSyn($text)
     $html = $pdo->prepare('SELECT suggest FROM synonim_cache WHERE text like "'.$text.'" ');
     $html->execute();
     $arr = $html->fetchColumn();
-    echo __LINE__.' из getSyn(), sizeof arr = '.sizeof($arr).'<br>';
+//echo __LINE__.' из getSyn(), sizeof arr = '.sizeof($arr).'<br>';
 //error_log("ответ getSyn(), sizeof arr = ".sizeof($arr).", gettype arr = ".gettype($arr)."\n", 3, "1test.log");
     if (!empty($arr)) {
         return array('arr' => unserialize($arr), 'state' => 1);
