@@ -16,8 +16,9 @@ function checkSpell($inputText)
 {
     // настройки yamdex.Speller https://tech.yandex.ru/speller/doc/dg/reference/speller-options-docpage
     $html = simplexml_load_file("http://speller.yandex.net/services/spellservice/checkText?lang=ru&options=22&text={$inputText}");
-    if ($text = $html->error->s)
-        return $text;
+    if (is_object($html)) {
+        return $html->error->s;
+    }
     else
         return $inputText;
 }
