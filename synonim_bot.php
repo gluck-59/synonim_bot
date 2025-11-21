@@ -1,12 +1,15 @@
 <?php
-    
-// бот "synonim_bot"
-// https://telegram.me/synonim_bot
+/**
+ * бот "synonim_bot"
+ * https://telegram.me/synonim_bot
+ *
+ * старый словарь parsingZkir
+ * новый словарь parsingSinonim_org
+ */
 
 mb_internal_encoding("UTF-8");
-// Включаем максимально подробный лог в файлы, чтобы поймать фаталы/ворнинги
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
+error_reporting(E_ERROR);
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__.'/error.log');
 set_time_limit(20);
@@ -42,7 +45,7 @@ $envPath = __DIR__.'/.env';
 if (is_readable($envPath)) {
     $env = parse_ini_file($envPath, false, INI_SCANNER_RAW);
     if ($env && isset($env['SYNONIM_BOT_TOKEN'])) {
-        $token = trim($env['SYNONIM_BOT_TOKEN']);
+        $token = $env['SYNONIM_BOT_TOKEN'];
     }
 } else {
     error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . 'отсутствует файл .env?', 3, __DIR__.'/1test.log');
@@ -57,21 +60,16 @@ define("TOKEN", $token);
 define("API_URL", 'https://api.telegram.org/bot'.TOKEN.'/');
 define('WEBHOOK_URL', "https://{$_SERVER['HTTP_HOST']}{$_SERVER['PHP_SELF']}");
 
-
 require_once('banlist.php');
-
-// ВАЖНО: сначала подключаем simple_html_dom, затем API, т.к. API может сразу вызвать processMessage()
 require_once __DIR__.'/simple_html_dom.php';
 require_once __DIR__.'/telegram_api.php';
-
-
 //require('emoticon_fuck.php');
 
 if (!empty($_SERVER['QUERY_STRING'])) {
     if ($_SERVER['QUERY_STRING'] == 'setWebhook') {
         apiRequest('setWebhook', array('url' => WEBHOOK_URL));
     } else {
-        $inputText = mb_strtolower( urldecode($_SERVER['QUERY_STRING']));
+        $inputText = mb_strtolower(urldecode($_SERVER['QUERY_STRING']));
         processMessage($inputText);
     }
 }
@@ -112,8 +110,8 @@ function extractInputText(array $message): ?array
 }
 
 
-function handleCommand(string $inputText, int $chatId, string $from, array $message = []): bool
-{
+function handleCommand(string $inputText, int $chatId, string $from, array $message = []): bool {
+    // в этом месте break не проканает
     switch (true) {
         case strpos($inputText, '/start') === 0:
             apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Привет, {$from}!\nНапишите мне слово по-русски и я подберу к нему синоним."));
@@ -124,15 +122,15 @@ function handleCommand(string $inputText, int $chatId, string $from, array $mess
             return true;
 
         case strpos($inputText, '/about') === 0:
-            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Я робот Синоним и я знаю более 160 тысяч слов: существительных, прилагательных, глаголов... В своих делах я использую <a href=\"www.trishin.ru/left/dictionary\">словарь синонимов</a> В.Н.Тришина, а правописание проверяет <a href=\"http://api.yandex.ru/speller\">Яндекс.Спеллер</a>. \nЕсли Вы нашли баг, свяжитесь <a href=\"telegram.me/motokofr\">с моим разработчиком</a>.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Я робот Синоним и я знаю более 160 тысяч слов: существительных, прилагательных, глаголов... В своих делах я использую <a href=\"www.trishin.ru/left/dictionary\">словарь синонимов</a> В.Н.Тришина, а правописание проверяет <a href=\"http://api.yandex.ru/speller\">Яндекс.Спеллер</a> (когда не завис). \nЕсли Вы нашли баг, свяжитесь <a href=\"telegram.me/motokofr\">с моим разработчиком</a>.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
             return true;
 
         case strpos($inputText, '/stat') === 0:
             apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => getStat(), 'parse_mode' => 'HTML'));
             return true;
 
-        case strpos($inputText, 'хуй') === 0:
-            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => buildObsceneReply($message), 'parse_mode' => 'HTML'));
+        case preg_match('/^хуй$/iu', $inputText) === 1:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => самТыХуй($message), 'parse_mode' => 'HTML'));
             return true;
 
         default:
@@ -141,7 +139,8 @@ function handleCommand(string $inputText, int $chatId, string $from, array $mess
 }
 
 
-function buildObsceneReply(array $message): string
+// если прислали слово хуй — вернем имя/ник юзера
+function самТыХуй(array $message): string
 {
     if (empty($message['from'])) {
         return '';
@@ -161,7 +160,7 @@ function buildObsceneReply(array $message): string
 function buildSynonymResponse(string $inputText, string $originalText, string $from): array
 {
 //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: {$inputText}\n", 3, __DIR__.'/1test.log');
-    $synonymData = getSyn($inputText);
+    $synonymData = getSynonims($inputText);
     $normalizedText = $inputText;
 
     if (($synonymData['state'] ?? 0) === 2) {
@@ -170,15 +169,15 @@ function buildSynonymResponse(string $inputText, string $originalText, string $f
 //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: {$spell}\n", 3, __DIR__.'/1test.log');
         if (!empty($spell)) {
             $normalizedText = $spell;
-            $synonymData = getSyn($normalizedText);
+            $synonymData = getSynonims($normalizedText);
         }
     }
 
-    return formatSynonymOutput($synonymData, $inputText, $normalizedText, $from, $originalText);
+    return formatOutput($synonymData, $inputText, $normalizedText, $from, $originalText);
 }
 
 
-function formatSynonymOutput(array $synonymData, string $inputText, string $normalizedText, string $from, string $originalText): array
+function formatOutput(array $synonymData, string $inputText, string $normalizedText, string $from, string $originalText): array
 {
     $synonyms = $synonymData['arr'] ?? [];
     $state = $synonymData['state'] ?? 0;
@@ -307,8 +306,9 @@ function processQuery($query)
     $shift = $callback->shift;
     $menu = '';
 
-    // теперь вызываем getSyn и выделяем заполнялку строки в функцию
-    $arr = getSyn($text);
+    // теперь вызываем getSynonims и выделяем заполнялку строки в функцию
+    $arr = getSynonims($text);
+    $out = '';
     
     foreach ($arr['arr'] as $key => $value)
     {
@@ -347,15 +347,15 @@ function send($chat_id, $out, $menu)
 
 
 
-function getSyn($text)
+function getSynonims($text)
 {
     // сначала пойдем в кэш
     global $pdo;
     $html = $pdo->prepare('SELECT suggest FROM synonim_cache WHERE text like "'.$text.'" ');
     $html->execute();
     $arr = $html->fetchColumn();
-//echo __LINE__.' из getSyn(), sizeof arr = '.sizeof($arr).'<br>';
-//error_log("ответ getSyn(), sizeof arr = ".sizeof($arr).", gettype arr = ".gettype($arr)."\n", 3, "1test.log");
+//echo __LINE__.' из getSynonims(), sizeof arr = '.sizeof($arr).'<br>';
+//error_log("ответ getSynonims(), sizeof arr = ".sizeof($arr).", gettype arr = ".gettype($arr)."\n", 3, "1test.log");
     if (!empty($arr)) {
         return array('arr' => unserialize($arr), 'state' => 1);
     }

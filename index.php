@@ -1,2 +1,6 @@
 <?php
-echo '404 Not Found';
+$input = 'хуЙ';
+if (preg_match('/^хуй$/iu', $input)) {
+    echo 'Совпадение!';
+}
+
