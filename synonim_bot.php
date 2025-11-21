@@ -77,151 +77,223 @@ if (!empty($_SERVER['QUERY_STRING'])) {
 }
 
 
-function processMessage($message) {
-echo __LINE__. ' processMessage start<br><pre>';
-    global $banlist;
-    $message_id = $message['message_id'];
-  $chat_id = $message['chat']['id'];
-  if        ( $message['from']['first_name'])   $from = $message['from']['first_name'];
-  else if   ( $message['from']['username']  )   $from = $message['from']['username'];
-  else if   ( $message['from']['last_name'] )   $from = $message['from']['last_name'];
-  else $from = 'мой друг';
-  
-  $out = '';
-  $menu = '';
-
-      if (in_array($message['from']['id'], $banlist))
-      {
-          apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => '<a href="http://natribu.org">Узнать ответ</a>', 'parse_mode' => 'HTML'));
-          die;
-      }
-
-  // если пришел текст, будем работать
-  if (isset($message['text']) || (!empty($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] != 'setWebhook'))
-  {
-    $inputText = mb_strtolower($message['text']);
-      if (!empty($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] != 'setWebhook') {
-          $inputText = mb_strtolower($message);
-      }
-    $state = 1; // успешно
-    
-    // обработаем commands
-    switch ($inputText)
-    {
-        case strpos($inputText, "/start") === 0:
-        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => "Привет, {$from}!\nНапишите мне слово по-русски и я подберу к нему синоним."));
-        die; // в commands стандартный break не сработает, надо die/exit
-        
-        case strpos($inputText, "/help") === 0:
-        //apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => "Напишите мне слово на русском языке, к которому Вы хотите найти синонимы и я постараюсь Вам помочь.\nТакже я умею исправлять ошибки и опечатки.\n\nЕсли я понравился Вам, пожалуйста проголосуйте за меня в <a href=\"https://storebot.me/bot/synonim_bot\">каталоге ботов</a>", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
-        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => "Напишите мне слово на русском языке, к которому Вы хотите найти синонимы и я постараюсь Вам помочь.\nТакже я умею исправлять ошибки и опечатки.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
-        die;
-
-        case strpos($inputText, "/about") === 0:
-        //apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => "Я робот Синоним и я знаю более 160 тысяч слов: существительных, прилагательных, глаголов... В своих делах я использую <a href=\"www.trishin.ru/left/dictionary\">словарь синонимов</a> В.Н.Тришина, а правописание проверяет <a href=\"http://api.yandex.ru/speller\">Яндекс.Спеллер</a>. \nЕсли Вы нашли баг, свяжитесь <a href=\"telegram.me/motokofr\">с моим разработчиком</a>. \nЕсли я понравился Вам, пожалуйста проголосуйте за меня в <a href=\"https://storebot.me/bot/synonim_bot\">каталоге ботов</a>", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
-        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => "Я робот Синоним и я знаю более 160 тысяч слов: существительных, прилагательных, глаголов... В своих делах я использую <a href=\"www.trishin.ru/left/dictionary\">словарь синонимов</a> В.Н.Тришина, а правописание проверяет <a href=\"http://api.yandex.ru/speller\">Яндекс.Спеллер</a>. \nЕсли Вы нашли баг, свяжитесь <a href=\"telegram.me/motokofr\">с моим разработчиком</a>.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
-        die;
-        
-        case strpos($inputText, "/stat") === 0:
-        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => getStat(), 'parse_mode' => 'HTML'));
-        die;                        
-        
-        
-        // если спросят ХУЙ, отдаем *name спросившего
-        case strpos($inputText, "хуй") === 0:
-        $hui = '';
-        if ($message['from']['first_name']) 
-            $hui .= ' '.$message['from']['first_name'];
-        elseif ($message['from']['last_name'])
-            $hui .= ' '.$message['from']['last_name'];
-        elseif ($message['from']['username'])
-            $hui .= ' '.$message['from']['username'];
-        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => $hui, 'parse_mode' => 'HTML'));
-        die;                        
+function resolveSenderName(array $message): string
+{
+    $from = $message['from'] ?? [];
+    foreach (['first_name', 'username', 'last_name'] as $field) {
+        if (!empty($from[$field])) {
+            return $from[$field];
+        }
     }
-    
-    
-    
-    /*
-    **  вся логика здесь
-    */
-echo __LINE__.' идем в словарь без спеллинга<br>';
-    // идем в словарь без спеллинга
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: $inputText\n", 3, "1test.log");
-    $arr = getSyn($inputText);
 
-//echo __LINE__.' ответ getSyn:<br>';
-//error_log("ответ getSyn: ".print_r($arr, 1), 3, "1test.log");
-//print_r($arr);
-    // если ничего нет то возможно это опечатка
-    // проспеллим ввод яндексом и пойдем в словарь с исправленным словом
-    if($arr['state'] == 2)
-    {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "юзаем спелл", 3, "1test.log");
-        $text = mb_strtolower(checkSpell($inputText));
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: $text\n", 3, "1test.log");
-        $arr = getSyn($text);
-    } else {
-//        echo __LINE__.'нужен спелл?<br>';
-//        error_log(__LINE__ . ' ' . " нужен спелл?", 3, "1test.log");
+    return 'мой друг';
+}
+
+
+function userIsBanned(array $message, array $banlist): bool
+{
+    $userId = $message['from']['id'] ?? null;
+    return $userId !== null && in_array($userId, $banlist);
+}
+
+
+function extractInputText(array $message): ?array
+{
+    if (isset($message['text'])) {
+        return [mb_strtolower($message['text']), $message['text']];
     }
-    
-    foreach ($arr['arr'] as $key => $value)
-    {
+
+    if (!empty($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== 'setWebhook') {
+        $original = urldecode($_SERVER['QUERY_STRING']);
+        return [mb_strtolower($original), $original];
+    }
+
+    return null;
+}
+
+
+function handleCommand(string $inputText, int $chatId, string $from, array $message = []): bool
+{
+    switch (true) {
+        case strpos($inputText, '/start') === 0:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Привет, {$from}!\nНапишите мне слово по-русски и я подберу к нему синоним."));
+            return true;
+
+        case strpos($inputText, '/help') === 0:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Напишите мне слово на русском языке, к которому Вы хотите найти синонимы и я постараюсь Вам помочь.\nТакже я умею исправлять ошибки и опечатки.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
+            return true;
+
+        case strpos($inputText, '/about') === 0:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => "Я робот Синоним и я знаю более 160 тысяч слов: существительных, прилагательных, глаголов... В своих делах я использую <a href=\"www.trishin.ru/left/dictionary\">словарь синонимов</a> В.Н.Тришина, а правописание проверяет <a href=\"http://api.yandex.ru/speller\">Яндекс.Спеллер</a>. \nЕсли Вы нашли баг, свяжитесь <a href=\"telegram.me/motokofr\">с моим разработчиком</a>.", 'disable_web_page_preview' => true, 'parse_mode' => 'HTML'));
+            return true;
+
+        case strpos($inputText, '/stat') === 0:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => getStat(), 'parse_mode' => 'HTML'));
+            return true;
+
+        case strpos($inputText, 'хуй') === 0:
+            apiRequestJson("sendMessage", array('chat_id' => $chatId, "text" => buildObsceneReply($message), 'parse_mode' => 'HTML'));
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+
+function buildObsceneReply(array $message): string
+{
+    if (empty($message['from'])) {
+        return '';
+    }
+
+    $from = $message['from'];
+    foreach (['first_name', 'last_name', 'username'] as $field) {
+        if (!empty($from[$field])) {
+            return ' ' . $from[$field];
+        }
+    }
+
+    return '';
+}
+
+
+function buildSynonymResponse(string $inputText, string $originalText, string $from): array
+{
+    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: {$inputText}\n", 3, __DIR__.'/1test.log');
+    $synonymData = getSyn($inputText);
+    $normalizedText = $inputText;
+
+    if (($synonymData['state'] ?? 0) === 2) {
+        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "юзаем спелл", 3, __DIR__.'/1test.log');
+        $spell = mb_strtolower(checkSpell($inputText));
+        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: {$spell}\n", 3, __DIR__.'/1test.log');
+        if (!empty($spell)) {
+            $normalizedText = $spell;
+            $synonymData = getSyn($normalizedText);
+        }
+    }
+
+    return formatSynonymOutput($synonymData, $inputText, $normalizedText, $from, $originalText);
+}
+
+
+function formatSynonymOutput(array $synonymData, string $inputText, string $normalizedText, string $from, string $originalText): array
+{
+    $synonyms = $synonymData['arr'] ?? [];
+    $state = $synonymData['state'] ?? 0;
+    $out = '';
+    $menu = '';
+    $displaySynonyms = $synonyms;
+    $lastKey = null;
+    $limitReached = false;
+
+    foreach ($synonyms as $key => $value) {
         $out .= $value."\n";
-        $len = mb_strlen($out);
-        
-        // нельзя посылать слишком длинный текст
-        if ( $len > 150 ) break;    
-    }
-//echo __LINE__.' длина ответа '.$len.'<br>';
-//error_log("длина ответа: ".$len, 3, "1test.log");
-
-    $suggest = $arr['arr'];
-
-    if ($key+1 < count($arr['arr']))
-    {
-        $menu = array('inline_keyboard' => 
-            array(
-                array(
-                    //array('text' => 'Отмена', 'callback_data' => 'cancel'),
-                    array('text' => 'Далее', 'callback_data' => '{ "text": "'.$inputText.'", "shift": "'.$key.'" }')
-                ),
-            ),
-        );
-    }        
-
-    if (!$out) 
-    {
-        $out = array(
-            "Увы, подходящего синонима для «{$text}» не нашлось. \nПопробуйте использовать единственное число или неопределенную форму.",
-            "Простите, {$from}, я не в силах подобрать синоним к «{$text}». \nПопробуйте использовать единственное число или неопределенную форму.",
-            "{$from}, мне очень жаль, но в моем словарном запасе слово «{$text}» отсуствует напрочь. \nПопробуйте использовать единственное число или неопределенную форму."
-        );
-        $rand_keys = array_rand($out);
-        $out = $out[$rand_keys];    
-        
-        $state = 0; //'неудачно';
-        
-        if ( strpos($text, " ") OR strpos($text, "\n"))
-            $out = "Попробуйте использовать одно слово, {$from}.";
-    }
-     
-    
-    if ( isset($text) && $inputText != $text ) {
-        $out = "<b>{$inputText} → {$text}</b>\n" . $out;
+        $lastKey = $key;
+        if (mb_strlen($out) > 150) {
+            $limitReached = true;
+            break;
+        }
     }
 
-    // отправляем
-    send($chat_id, $out, $menu);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "send ".strlen($out).' символов', 3, "1test.log");
+    if ($limitReached && $lastKey !== null && ($lastKey + 1) < count($synonyms)) {
+        $menu = buildPaginationMenu($normalizedText, $lastKey);
+    }
 
-    // пишем статистику
-    if ($state != 1) $suggest = NULL;
-    setStat($message, $suggest, $state);
-  }
-  else // если пришел не текст, выдадим отлуп
-    apiRequest("sendMessage", array('chat_id' => $chat_id, "text" => "Я понимаю только текст. Пишите, {$from}, пишите :)"));
+    if ($out === '') {
+        $state = 0;
+        $displaySynonyms = null;
+        $out = buildFailureMessage($normalizedText, $from);
+    }
+
+    $userText = $originalText !== '' ? $originalText : $inputText;
+    if ($normalizedText !== $inputText) {
+        $out = "<b>{$userText} → {$normalizedText}</b>\n" . $out;
+    }
+
+    return [
+        'text' => $out,
+        'menu' => $menu,
+        'state' => $state,
+        'suggest' => $displaySynonyms,
+    ];
+}
+
+
+function buildPaginationMenu(string $text, int $shift): array
+{
+    $payload = json_encode(['text' => $text, 'shift' => $shift], JSON_UNESCAPED_UNICODE);
+
+    return [
+        'inline_keyboard' => [
+            [
+                ['text' => 'Далее', 'callback_data' => $payload],
+            ],
+        ],
+    ];
+}
+
+
+function buildFailureMessage(string $text, string $from): string
+{
+    if (strpos($text, ' ') !== false || strpos($text, "\n") !== false) {
+        return "Попробуйте использовать одно слово, {$from}.";
+    }
+
+    $messages = [
+        "Увы, подходящего синонима для «{$text}» не нашлось. \nПопробуйте использовать единственное число или неопределенную форму.",
+        "Простите, {$from}, я не в силах подобрать синоним к «{$text}». \nПопробуйте использовать единственное число или неопределенную форму.",
+        "{$from}, мне очень жаль, но в моем словарном запасе слово «{$text}» отсуствует напрочь. \nПопробуйте использовать единственное число или неопределенную форму.",
+    ];
+
+    return $messages[array_rand($messages)];
+}
+
+
+function processMessage($message) {
+    if (!is_array($message)) {
+        if ($message !== '') {
+            $response = buildSynonymResponse(mb_strtolower((string)$message), (string)$message, 'мой друг');
+            echo nl2br(htmlspecialchars($response['text'], ENT_QUOTES, 'UTF-8'));
+        }
+        return;
+    }
+
+    if (!isset($message['chat']['id'])) {
+        return;
+    }
+
+    global $banlist;
+
+    $chat_id = $message['chat']['id'];
+    $from = resolveSenderName($message);
+
+    if (userIsBanned($message, $banlist)) {
+        apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => '<a href="http://natribu.org">Узнать ответ</a>', 'parse_mode' => 'HTML'));
+        return;
+    }
+
+    $textData = extractInputText($message);
+    if ($textData === null) {
+        apiRequest("sendMessage", array('chat_id' => $chat_id, "text" => "Я понимаю только текст. Пишите, {$from}, пишите :)"));
+        return;
+    }
+
+    [$inputText, $originalText] = $textData;
+
+    if (handleCommand($inputText, $chat_id, $from, $message)) {
+        return;
+    }
+
+    $response = buildSynonymResponse($inputText, $originalText, $from);
+    send($chat_id, $response['text'], $response['menu']);
+    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "send ".strlen($response['text']).' символов', 3, __DIR__.'/1test.log');
+
+    if (isset($message['text'])) {
+        $suggest = $response['state'] === 1 ? $response['suggest'] : null;
+        setStat($message, $suggest, $response['state']);
+    }
 }
 
 
