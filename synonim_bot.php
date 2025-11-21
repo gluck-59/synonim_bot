@@ -2,9 +2,9 @@
     
 // бот "synonim_bot"
 // https://telegram.me/synonim_bot
+// замена токена или урла: http://site/setWebhook
 
 mb_internal_encoding("UTF-8");
-// Включаем максимально подробный лог в файлы, чтобы поймать фаталы/ворнинги
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -63,8 +63,6 @@ require_once('banlist.php');
 // ВАЖНО: сначала подключаем simple_html_dom, затем API, т.к. API может сразу вызвать processMessage()
 require_once __DIR__.'/simple_html_dom.php';
 require_once __DIR__.'/telegram_api.php';
-
-
 //require('emoticon_fuck.php');
 
 if (!empty($_SERVER['QUERY_STRING'])) {
@@ -145,25 +143,26 @@ echo __LINE__. ' processMessage start<br><pre>';
     /*
     **  вся логика здесь
     */
-echo __LINE__.' идем в словарь без спеллинга<br>';
     // идем в словарь без спеллинга
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: $inputText\n", 3, "1test.log");
+echo __LINE__.' идем в словарь без спеллинга<br>';
+//error_log("\n\n".date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: $inputText\n", 3, "1test.log");
     $arr = getSyn($inputText);
 
-//echo __LINE__.' ответ getSyn:<br>';
+    echo __LINE__.' ответ getSyn:<br>';
 //error_log("ответ getSyn: ".print_r($arr, 1), 3, "1test.log");
 //print_r($arr);
+
     // если ничего нет то возможно это опечатка
     // проспеллим ввод яндексом и пойдем в словарь с исправленным словом
     if($arr['state'] == 2)
     {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "юзаем спелл", 3, "1test.log");
+//error_log("\n\n".date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в спеллинг", 3, "1test.log");
         $text = mb_strtolower(checkSpell($inputText));
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "спелл: $text\n", 3, "1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ от спеллинга: $text\n", 3, "1test.log");
         $arr = getSyn($text);
     } else {
-//        echo __LINE__.'нужен спелл?<br>';
-//        error_log(__LINE__ . ' ' . " нужен спелл?", 3, "1test.log");
+        echo __LINE__.'нужен спелл?<br>';
+//error_log(__LINE__ . ' ' . " нужен спелл?", 3, "1test.log");
     }
     
     foreach ($arr['arr'] as $key => $value)
@@ -174,7 +173,7 @@ echo __LINE__.' идем в словарь без спеллинга<br>';
         // нельзя посылать слишком длинный текст
         if ( $len > 150 ) break;    
     }
-//echo __LINE__.' длина ответа '.$len.'<br>';
+        echo __LINE__.' длина ответа '.$len.'<br>';
 //error_log("длина ответа: ".$len, 3, "1test.log");
 
     $suggest = $arr['arr'];
@@ -214,7 +213,7 @@ echo __LINE__.' идем в словарь без спеллинга<br>';
 
     // отправляем
     send($chat_id, $out, $menu);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "send ".strlen($out).' символов', 3, "1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "send ".strlen($out).' символов', 3, "1test.log");
 
     // пишем статистику
     if ($state != 1) $suggest = NULL;
@@ -237,7 +236,7 @@ function processQuery($query)
 
     // теперь вызываем getSyn и выделяем заполнялку строки в функцию
     $arr = getSyn($text);
-    
+    $out = '';
     foreach ($arr['arr'] as $key => $value)
     {
         if ($key > $shift)
@@ -282,17 +281,19 @@ function getSyn($text)
     $html = $pdo->prepare('SELECT suggest FROM synonim_cache WHERE text like "'.$text.'" ');
     $html->execute();
     $arr = $html->fetchColumn();
-//echo __LINE__.' из getSyn(), sizeof arr = '.sizeof($arr).'<br>';
+    echo __LINE__.' из getSyn(), sizeof arr = '.sizeof($arr).'<br>';
 //error_log("ответ getSyn(), sizeof arr = ".sizeof($arr).", gettype arr = ".gettype($arr)."\n", 3, "1test.log");
     if (!empty($arr)) {
         return array('arr' => unserialize($arr), 'state' => 1);
     }
-error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова нет. вызываем парсер со словом $text \n", 3, "1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова нет. вызываем парсер со словом $text \n", 3, "1test.log");
     unset($html);
     unset($arr);
-//    $arr = parsingZkir($text);
+
+    //    $arr = parsingZkir($text);
     $arr = parsingSinonim_org($text);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ parsingZkir: ".sizeof($arr)."\n", 3, "1test.log");
+
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ parsingSinonim_org: ".sizeof($arr)."\n", 3, "1test.log");
     if (empty($arr))
     {
         $state = 2; // === то ли slova.zkir.ru в дауне, то ли юзер прислал хуйню ===
@@ -312,26 +313,24 @@ error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова н�
  * @return array
  */
 function parsingZkir(string $word): array {
-//    error_log("parsingZkir start со словом: ".$word."\n", 3, __DIR__."/1test.log");
+//error_log("parsingZkir start со словом: ".$word."\n", 3, __DIR__."/1test.log");
 
     $url = 'http://slova.zkir.ru/dict/' . urlencode($word);
 
     // Если cURL недоступен — лог и безопасный фоллбек
-    if (!function_exists('curl_init'))
-
-    {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL недоступен, используем stream_context + file_get_contents\n", 3, __DIR__."/1test.log");
+    if (!function_exists('curl_init')) {
+//error_log(date('d-m-y H :i') . ' ' . __LINE__ . ' ' . "cURL недоступен, используем stream_context + file_get_contents\n", 3, __DIR__."/1test.log");
         $context = stream_context_create([
             'http' => [
                 'timeout' => 8,
                 'header'  => "User-Agent: synonim_bot\r\nAccept: text/html\r\n",
             ],
         ]);
-//        error_log("before file_get_contents\n", 3, __DIR__."/1test.log");
+//error_log("before file_get_contents\n", 3, __DIR__."/1test.log");
         $body = @file_get_contents($url, false, $context);
-//        error_log("after file_get_contents bodyLen=".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
+//error_log("after file_get_contents bodyLen=".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
         if ($body === false || $body === '') {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "file_get_contents вернул пусто\n", 3, __DIR__."/1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "file_get_contents вернул пусто\n", 3, __DIR__."/1test.log");
             return [];
         }
     } else {
@@ -348,7 +347,7 @@ function parsingZkir(string $word): array {
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_TIMEOUT => 60,
-                CURLOPT_USERAGENT => 'telegram_bot',
+                CURLOPT_USERAGENT => 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)',
                 CURLOPT_ENCODING => '',
                 CURLOPT_HTTPHEADER => [
                     'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -357,8 +356,6 @@ function parsingZkir(string $word): array {
                 CURLOPT_NOSIGNAL => true,
                 CURLOPT_TCP_NODELAY => true,
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-//                CURLOPT_LOW_SPEED_LIMIT => 300, // байт/сек
-//                CURLOPT_LOW_SPEED_TIME => 3,    // сек
             ]);
             $body = curl_exec($ch);
             $errno = curl_errno($ch);
@@ -370,30 +367,30 @@ function parsingZkir(string $word): array {
                 break; // успех
             }
             $finalErr = "try#$i errno=$errno http=$code err=$err bodyLen=".strlen((string)$body);
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL retry: $finalErr\n", 3, __DIR__."/1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL retry: $finalErr\n", 3, __DIR__."/1test.log");
             if ($i < $attempts) usleep($delayMs * 1000);
         }
 
         if ($errno !== 0) {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL error ($errno): $err\n", 3, __DIR__."/1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL error ($errno): $err\n", 3, __DIR__."/1test.log");
             return [];
         }
         if ($code < 200 || $code >= 300 || $body === false || $body === '') {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "HTTP code: $code, bodyLen: ".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "HTTP code: $code, bodyLen: ".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
             return [];
         }
     }
 
     // Парсим HTML из строки, чтобы не использовать сетевой вызов внутри simple_html_dom
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "before str_get_html\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "before str_get_html\n", 3, __DIR__."/1test.log");
     if (strlen($body) > 800000) {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "body too large: ".strlen($body)."\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "body too large: ".strlen($body)."\n", 3, __DIR__."/1test.log");
         return [];
     }
     $dom = str_get_html($body);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "after str_get_html\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "after str_get_html\n", 3, __DIR__."/1test.log");
     if ($dom === false) {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "str_get_html вернул false\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "str_get_html вернул false\n", 3, __DIR__."/1test.log");
         return [];
     }
 
@@ -401,7 +398,7 @@ function parsingZkir(string $word): array {
     foreach ($dom->find('a.synonim') as $el) {
         $result[] = strip_tags(trim($el->innertext));
     }
-//    error_log("parsed synonims: ".count($result)."\n", 3, __DIR__."/1test.log");
+//error_log("parsed synonims: ".count($result)."\n", 3, __DIR__."/1test.log");
     return $result;
 }
 
@@ -428,7 +425,6 @@ function parsingSinonim_org($inputText = '') {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-
     curl_close($ch);
 
     if ($response === false) {
@@ -457,10 +453,6 @@ start - Начать
 help - Как пользоваться
 about - О Синониме
 stat - Статистика использования
-
-
-
-
 
 [
     {

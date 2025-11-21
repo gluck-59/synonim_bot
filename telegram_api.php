@@ -49,10 +49,10 @@ function setStat($message, $suggest, $state)
     }
     catch (Exception $e)
     {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "-- setStat: --- {$date} {$e}\n", 3, "error.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "-- setStat Exception: --- {$date} {$e}\n", 3, "error.log");
     }
 //$check = print_r($suggest, true);
-$check = serialize($suggest);
+//$check = serialize($suggest);
 //error_log("-- setStat:  message {$message} \nsuggest {$suggest}\n state {$state} \ncheck {$check}", 3, "1test.log");    
     return;    
 }
@@ -87,7 +87,7 @@ function getStat()
 function apiRequestWebhook($method, $parameters) {
   if (!is_string($method)) {
     global $date;
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Method name must be a string\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Method name must be a string\n", 3, __DIR__."/1test.log");
     return false;
   }
 
@@ -95,7 +95,7 @@ function apiRequestWebhook($method, $parameters) {
     $parameters = array();
   } else if (!is_array($parameters)) {
     global $date;      
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Parameters must be an array\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Parameters must be an array\n", 3, __DIR__."/1test.log");
     return false;
   }
 
@@ -117,7 +117,7 @@ function exec_curl_request($handle) {
     $errno = curl_errno($handle);
     $error = curl_error($handle);
     global $date;    
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Curl returned error $errno: $error\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Curl returned error $errno: $error\n", 3, __DIR__."/1test.log");
     curl_close($handle);
     return false;
   }
@@ -128,16 +128,16 @@ function exec_curl_request($handle) {
   if ($http_code >= 500) {
     // do not wat to DDOS server if something goes wrong
     global $date;    
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} ошибка CURL, HTTP={$http_code}\n", 3, __DIR__."/1test.log");    
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} ошибка CURL, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
     sleep(10);
     return false;
   } else if ($http_code != 200) {
     $response = json_decode($response, true);
     global $date;    
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Request has failed with error {$response['error_code']}: {$response['description']}, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Request has failed with error {$response['error_code']}: {$response['description']}, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
     if ($http_code == 401) {
       global $date;    
-      error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Invalid access token provided, HTTP={$http_code}\n", 3, __DIR__."/1test.log");        
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Invalid access token provided, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
       throw new Exception('Invalid access token provided');
     }
     return false;
@@ -145,7 +145,7 @@ function exec_curl_request($handle) {
     $response = json_decode($response, true);
     if (isset($response['description'])) {
       global $date;
-      //error_log("\n{$date} Request was successfull: {$response['description']}, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
+//error_log("\n{$date} Request was successfull: {$response['description']}, HTTP={$http_code}\n", 3, __DIR__."/1test.log");
     }
     $response = $response['result'];
   }
@@ -158,7 +158,7 @@ function exec_curl_request($handle) {
 function apiRequest($method, $parameters) {
     global $date;
   if (!is_string($method)) {
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} __LINE__ Method name must be a string\n", 3, "/1test.log");
+error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Method name must be a string\n", 3, "/1test.log");
     return false;
   }
 
@@ -166,7 +166,7 @@ function apiRequest($method, $parameters) {
     $parameters = array();
   } else if (!is_array($parameters)) {
     global $date;      
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} __LINE__ Parameters must be an array\n", 3, "/1test.log");
+    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} Parameters must be an array\n", 3, "/1test.log");
     return false;
   }
 
@@ -178,7 +178,7 @@ function apiRequest($method, $parameters) {
   }
   $url = API_URL.$method.'?'.http_build_query($parameters);
 //echo __LINE__.' url = '.$url;
-error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} __LINE__ apiRequest {$url} \n", 3, "/1test.log");
+//error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} apiRequest {$url} \n", 3, "/1test.log");
 
   $handle = curl_init($url);
 
@@ -213,12 +213,8 @@ function apiRequestJson($method, $parameters) {
 
   $parameters["method"] = $method;
   $parameters = json_encode($parameters);
-  
+
   $handle = curl_init(API_URL);
-//curl_setopt($handle, CURLOPT_PROXYPORT, 3128);
-//curl_setopt($handle, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
-//curl_setopt($handle, CURLOPT_PROXY, 'opengluck.online');
-//curl_setopt($handle, CURLOPT_PROXYUSERPWD, 'gluck:gjhyj');
 
   curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 5);
