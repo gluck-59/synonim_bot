@@ -1,6 +1,6 @@
 <?php
 mb_internal_encoding("UTF-8");
-error_reporting(E_ALL);
+error_reporting(E_ERROR);
 ini_set('display_errors', 1);
 require_once('pdo.php');
 $date = date('d-m-Y G:i:s');
@@ -8,6 +8,7 @@ $date = date('d-m-Y G:i:s');
 
 /**
  * яндексит очепятки, возвращает скорректированное слово
+ * яндех часто висит, по возможности не использовать
  *
  * @param $inputText
  * @return mixed|SimpleXMLElement
@@ -83,7 +84,11 @@ function getStat()
 }
 
 
-
+/**
+ * @param $method
+ * @param $parameters
+ * @return bool
+ */
 function apiRequestWebhook($method, $parameters) {
   if (!is_string($method)) {
     global $date;
@@ -107,7 +112,11 @@ function apiRequestWebhook($method, $parameters) {
 }
 
 
-
+/**
+ * @param $handle
+ * @return false|mixed
+ * @throws Exception
+ */
 function exec_curl_request($handle) {
   $response = curl_exec($handle);
 
@@ -154,7 +163,12 @@ function exec_curl_request($handle) {
 }
 
 
-
+/**
+ * @param $method
+ * @param $parameters
+ * @return false|mixed
+ * @throws Exception
+ */
 function apiRequest($method, $parameters) {
     global $date;
   if (!is_string($method)) {
@@ -185,8 +199,6 @@ error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "{$date} __LINE__ apiReques
   curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 5);
   curl_setopt($handle, CURLOPT_TIMEOUT, 60);
-  
-
 
 $result = exec_curl_request($handle);
 //error_log("--> apiRequest {$result} \n\n", 3, "1test.log");  
@@ -195,7 +207,12 @@ $result = exec_curl_request($handle);
 }
 
 
-
+/**
+ * @param $method
+ * @param $parameters
+ * @return false|mixed
+ * @throws Exception
+ */
 function apiRequestJson($method, $parameters) {
   if (!is_string($method)) {
     global $date;      
@@ -213,23 +230,15 @@ function apiRequestJson($method, $parameters) {
 
   $parameters["method"] = $method;
   $parameters = json_encode($parameters);
-  
   $handle = curl_init(API_URL);
-//curl_setopt($handle, CURLOPT_PROXYPORT, 3128);
-//curl_setopt($handle, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
-//curl_setopt($handle, CURLOPT_PROXY, 'opengluck.online');
-//curl_setopt($handle, CURLOPT_PROXYUSERPWD, 'gluck:gjhyj');
 
   curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 5);
   curl_setopt($handle, CURLOPT_TIMEOUT, 60);
-//curl_setopt($handle, CURLOPT_POST, 1); // 
   curl_setopt($handle, CURLOPT_POSTFIELDS, $parameters);
   curl_setopt($handle, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
 
-
-  //$log = print_r($parameters, true);
-  //error_log("--> apiRequestJson {$log} \n\n", 3, "1test.log");  
+//error_log("--> apiRequestJson {$log} \n\n", 3, "1test.log");
   
   return exec_curl_request($handle);
 }
@@ -253,20 +262,19 @@ if ($content !== false) {
 $update = json_decode($content, true);
 
 
-// прилетело с сервера талаграм вывод в лог
+// прилетело с сервера тг — вывод в лог
 //error_log(date("j.m.y G:i:s", time()) ." GMT:\n".print_r($content, true). "\n\n", 3, "1test.log");
 
 
-if (!$update) {
+//if (!$update) {
   // receive wrong update, must not happen
-}
+//}
 
 
 // если прилетела мессага
 if (isset($update["message"])) {
     processMessage($update["message"]);
 }
-
 
 
 // если прилетел online query

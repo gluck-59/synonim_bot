@@ -1,6 +1,6 @@
 <?php
 /**
- * бот "synonim_bot"
+ * бот "Синоним"
  * https://telegram.me/synonim_bot
  *
  * старый словарь parsingZkir
@@ -75,6 +75,10 @@ if (!empty($_SERVER['QUERY_STRING'])) {
 }
 
 
+/**
+ * @param array $message
+ * @return string
+ */
 function resolveSenderName(array $message): string
 {
     $from = $message['from'] ?? [];
@@ -83,11 +87,15 @@ function resolveSenderName(array $message): string
             return $from[$field];
         }
     }
-
     return 'мой друг';
 }
 
 
+/**
+ * @param array $message
+ * @param array $banlist
+ * @return bool
+ */
 function userIsBanned(array $message, array $banlist): bool
 {
     $userId = $message['from']['id'] ?? null;
@@ -95,6 +103,10 @@ function userIsBanned(array $message, array $banlist): bool
 }
 
 
+/**
+ * @param array $message
+ * @return array|null
+ */
 function extractInputText(array $message): ?array
 {
     if (isset($message['text'])) {
@@ -110,6 +122,14 @@ function extractInputText(array $message): ?array
 }
 
 
+/**
+ * @param string $inputText
+ * @param int $chatId
+ * @param string $from
+ * @param array $message
+ * @return bool
+ * @throws Exception
+ */
 function handleCommand(string $inputText, int $chatId, string $from, array $message = []): bool {
     // в этом месте break не проканает
     switch (true) {
@@ -138,8 +158,12 @@ function handleCommand(string $inputText, int $chatId, string $from, array $mess
     }
 }
 
-
+/**
+ * @param array $message
+ * @return string
+ */
 // если прислали слово хуй — вернем имя/ник юзера
+// а почему китайцы могут юзать иероглифы в именах функций-переменных, а мы кириллицу не можем? :)
 function самТыХуй(array $message): string
 {
     if (empty($message['from'])) {
@@ -152,11 +176,16 @@ function самТыХуй(array $message): string
             return ' ' . $from[$field];
         }
     }
-
     return '';
 }
 
 
+/**
+ * @param string $inputText
+ * @param string $originalText
+ * @param string $from
+ * @return array
+ */
 function buildSynonymResponse(string $inputText, string $originalText, string $from): array
 {
 //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "идем в словарь без спеллинга, ввод: {$inputText}\n", 3, __DIR__.'/1test.log');
@@ -177,6 +206,14 @@ function buildSynonymResponse(string $inputText, string $originalText, string $f
 }
 
 
+/**
+ * @param array $synonymData
+ * @param string $inputText
+ * @param string $normalizedText
+ * @param string $from
+ * @param string $originalText
+ * @return array
+ */
 function formatOutput(array $synonymData, string $inputText, string $normalizedText, string $from, string $originalText): array
 {
     $synonyms = $synonymData['arr'] ?? [];
@@ -220,6 +257,11 @@ function formatOutput(array $synonymData, string $inputText, string $normalizedT
 }
 
 
+/**
+ * @param string $text
+ * @param int $shift
+ * @return array[]
+ */
 function buildPaginationMenu(string $text, int $shift): array
 {
     $payload = json_encode(['text' => $text, 'shift' => $shift], JSON_UNESCAPED_UNICODE);
@@ -233,7 +275,11 @@ function buildPaginationMenu(string $text, int $shift): array
     ];
 }
 
-
+/**
+ * @param string $text
+ * @param string $from
+ * @return string
+ */
 function buildFailureMessage(string $text, string $from): string
 {
     if (strpos($text, ' ') !== false || strpos($text, "\n") !== false) {
@@ -250,6 +296,11 @@ function buildFailureMessage(string $text, string $from): string
 }
 
 
+/**
+ * @param $message
+ * @return void
+ * @throws Exception
+ */
 function processMessage($message) {
     if (!is_array($message)) {
         if ($message !== '') {
@@ -296,8 +347,10 @@ function processMessage($message) {
 }
 
 
-
-
+/**
+ * @param $query
+ * @return void
+ */
 function processQuery($query)
 {
     $callback = json_decode($query['data']);
@@ -339,14 +392,23 @@ function processQuery($query)
 }
 
 
-
+/**
+ * @param $chat_id
+ * @param $out
+ * @param $menu
+ * @return void
+ * @throws Exception
+ */
 function send($chat_id, $out, $menu)
 {
     apiRequestJson("sendMessage", array('chat_id' => $chat_id, "text" => $out, 'parse_mode' => 'HTML',  'reply_markup' => $menu));
 }
 
 
-
+/**
+ * @param $text
+ * @return array
+ */
 function getSynonims($text)
 {
     // сначала пойдем в кэш
@@ -377,6 +439,8 @@ function getSynonims($text)
 
 
 /**
+ * @deprecated
+ *
  * ходит в словарь slova.zkir.ru, тянет синонимы
  * http://simplehtmldom.sourceforge.net/manual.htm
  *
@@ -407,12 +471,13 @@ function parsingZkir(string $word): array {
             return [];
         }
     } else {
-        // Используем cURL вместо file_get_contents/file_get_html для стабильности на PHP 7.4
+        // Используем cURL вместо file_get_contents/file_get_html
         // Добавляем ретраи и быстрые таймауты, чтобы не зависать в вебхуке
         $attempts = 2;
         $delayMs  = 250; // backoff между попытками
         $body = '';
         $finalErr = '';
+
         for ($i = 1; $i <= $attempts; $i++) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
@@ -478,8 +543,10 @@ function parsingZkir(string $word): array {
 }
 
 
+
 /**
- *
+ * @param $inputText
+ * @return array
  */
 function parsingSinonim_org($inputText = '') {
     $url = 'http://sinonim.org/s/'.urlencode($inputText);
@@ -525,16 +592,7 @@ function parsingSinonim_org($inputText = '') {
 
 
 /*
-commands
-start - Начать
-help - Как пользоваться
-about - О Синониме
-stat - Статистика использования
-
-
-
-
-
+оборзец — что прилетает с сервера тг
 [
     {
         "message_id":1584,
@@ -555,9 +613,6 @@ stat - Статистика использования
         "text":"\u0442\u0435\u0441\u0442"
     }
 ]    
-
-
-
 */
 ?>
 

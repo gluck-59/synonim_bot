@@ -1,9 +1,4 @@
 <?php
-    
-// мануал http://phpfaq.ru/pdo
-// константы http://fi2.php.net/manual/ru/pdo.constants.php
-// транзакции http://fi2.php.net/manual/ru/pdo.transactions.php
-
 error_reporting(E_ERROR);
 ini_set('display_errors','On');
 ini_set('default_charset', 'utf-8');
