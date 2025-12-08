@@ -29,7 +29,7 @@ function checkSpell($inputText)
  *
  * @param $message
  * @param $suggest
- * @param $state
+ * @param $state // 0 = из запроса к словарю; 1 = найдено в кэше; 2 = не найдено даже после спеллинга
  * @return void
  */
 function setStat($message, $suggest, $state)
