@@ -3,7 +3,7 @@ error_reporting(E_ERROR);
 ini_set('display_errors','On');
 ini_set('default_charset', 'utf-8');
 
-$host = 'localhost';
+$host = '127.0.0.1';
 $db = 'synonim';
 $charset = 'utf8';
 $user = $env['DB_USER'];

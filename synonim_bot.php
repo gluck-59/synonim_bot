@@ -26,7 +26,7 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     $lvl = $levels[$errno] ?? $errno;
     $msg = "PHP $lvl: $errstr in $errfile:$errline\n";
     error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg); // в error.log
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg, 3, __DIR__.'/1test.log');
+    //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg, 3, __DIR__.'/1test.log');
     return false; // позволяем стандартной обработке продолжить, если нужно
 });
 
@@ -36,7 +36,7 @@ register_shutdown_function(function() {
     if ($e) {
         $msg = sprintf("Shutdown error: %s in %s:%d\n", $e['message'] ?? '', $e['file'] ?? '', $e['line'] ?? 0);
         error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg);
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg, 3, __DIR__.'/1test.log');
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg, 3, __DIR__.'/1test.log');
     }
 });
 
@@ -48,7 +48,7 @@ if (is_readable($envPath)) {
         $token = $env['SYNONIM_BOT_TOKEN'];
     }
 } else {
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . 'отсутствует файл .env?', 3, __DIR__.'/1test.log');
+    //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . 'отсутствует файл .env?', 3, __DIR__.'/1test.log');
     die;
 }
 
@@ -422,10 +422,13 @@ function getSynonims($text)
         return array('arr' => unserialize($arr), 'state' => 1);
     }
 //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "в кэше слова нет. вызываем парсер со словом $text \n", 3, "1test.log");
-    unset($html);
-    unset($arr);
-//    $arr = parsingZkir($text);
-    $arr = parsingSinonim_org($text);
+    try {
+        $arr = parsingSinonim_org($text);
+    } catch (Throwable $e) {
+        $msg = "Исключение в parsingSinonim_org: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine();
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . $msg . "\n", 3, __DIR__ . '/1test.log');
+        $arr = [];
+    }
 //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "ответ словаря: ".sizeof($arr)."\n", 3, "1test.log");
     if (empty($arr))
     {
@@ -456,18 +459,18 @@ function parsingZkir(string $word): array {
     if (!function_exists('curl_init'))
 
     {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL недоступен, используем stream_context + file_get_contents\n", 3, __DIR__."/1test.log");
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL недоступен, используем stream_context + file_get_contents\n", 3, __DIR__."/1test.log");
         $context = stream_context_create([
             'http' => [
                 'timeout' => 8,
-                'header'  => "User-Agent: synonim_bot\r\nAccept: text/html\r\n",
+                'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36\r\nAccept: text/html,application/xhtml+xml\r\n",
             ],
         ]);
 //        error_log("before file_get_contents\n", 3, __DIR__."/1test.log");
         $body = @file_get_contents($url, false, $context);
 //        error_log("after file_get_contents bodyLen=".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
         if ($body === false || $body === '') {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "file_get_contents вернул пусто\n", 3, __DIR__."/1test.log");
+            //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "file_get_contents вернул пусто\n", 3, __DIR__."/1test.log");
             return [];
         }
     } else {
@@ -485,7 +488,7 @@ function parsingZkir(string $word): array {
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_TIMEOUT => 60,
-                CURLOPT_USERAGENT => 'telegram_bot',
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 CURLOPT_ENCODING => '',
                 CURLOPT_HTTPHEADER => [
                     'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -507,30 +510,30 @@ function parsingZkir(string $word): array {
                 break; // успех
             }
             $finalErr = "try#$i errno=$errno http=$code err=$err bodyLen=".strlen((string)$body);
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL retry: $finalErr\n", 3, __DIR__."/1test.log");
+            //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL retry: $finalErr\n", 3, __DIR__."/1test.log");
             if ($i < $attempts) usleep($delayMs * 1000);
         }
 
         if ($errno !== 0) {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL error ($errno): $err\n", 3, __DIR__."/1test.log");
+            //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "cURL error ($errno): $err\n", 3, __DIR__."/1test.log");
             return [];
         }
         if ($code < 200 || $code >= 300 || $body === false || $body === '') {
-            error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "HTTP code: $code, bodyLen: ".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
+            //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "HTTP code: $code, bodyLen: ".strlen((string)$body)."\n", 3, __DIR__."/1test.log");
             return [];
         }
     }
 
     // Парсим HTML из строки, чтобы не использовать сетевой вызов внутри simple_html_dom
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "before str_get_html\n", 3, __DIR__."/1test.log");
+    //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "before str_get_html\n", 3, __DIR__."/1test.log");
     if (strlen($body) > 800000) {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "body too large: ".strlen($body)."\n", 3, __DIR__."/1test.log");
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "body too large: ".strlen($body)."\n", 3, __DIR__."/1test.log");
         return [];
     }
     $dom = str_get_html($body);
-    error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "after str_get_html\n", 3, __DIR__."/1test.log");
+    //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "after str_get_html\n", 3, __DIR__."/1test.log");
     if ($dom === false) {
-        error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "str_get_html вернул false\n", 3, __DIR__."/1test.log");
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "str_get_html вернул false\n", 3, __DIR__."/1test.log");
         return [];
     }
 
@@ -549,19 +552,31 @@ function parsingZkir(string $word): array {
  * @return array
  */
 function parsingSinonim_org($inputText = '') {
-    $url = 'http://sinonim.org/s/'.urlencode($inputText);
+    $url = 'https://sinonim.org/s/'.urlencode($inputText);
 
+
+    $ckfile = __DIR__ . '/sinonim_cookies.txt';
+    if (!file_exists($ckfile)) { file_put_contents($ckfile, ""); chmod($ckfile, 0666); }
 
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,           // вернуть ответ строкой
-        CURLOPT_FOLLOWLOCATION => true,           // следовать редиректам
-        CURLOPT_CONNECTTIMEOUT => 5,              // таймаут соединения (сек)
-        CURLOPT_TIMEOUT => 10,             // общий таймаут запроса
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_ENCODING => '',
+        CURLOPT_COOKIEFILE => $ckfile,
+        CURLOPT_COOKIEJAR => $ckfile,
         CURLOPT_HTTPHEADER => [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Sec-Ch-Ua: "Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            'Sec-Ch-Ua-Mobile: ?0',
+            'Sec-Ch-Ua-Platform: "Windows"',
+            'Referer: https://sinonim.org/',
+            'Dnt: 1',
         ],
     ]);
 
@@ -575,8 +590,14 @@ function parsingSinonim_org($inputText = '') {
         throw new RuntimeException('cURL error: ' . $error);
     }
 
-    echo "HTTP $httpCode\n";
+    //echo "HTTP $httpCode\n";
+    $bodyLen = strlen($response);
+    //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "sinonim.org: HTTP=$httpCode bodyLen=$bodyLen\n", 3, __DIR__ . '/1test.log');
     $html = str_get_html($response);
+    if ($html === false) {
+        //error_log(date('d-m-y H:i') . ' ' . __LINE__ . ' ' . "str_get_html вернул false\n", 3, __DIR__ . '/1test.log');
+        return [];
+    }
     $out = [];
     foreach ($html->find('table#mainTable') as $table) {
         foreach($table->find('td') as $td) {
