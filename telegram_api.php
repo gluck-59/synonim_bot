@@ -66,6 +66,26 @@ $check = serialize($suggest);
 function getStat()
 {
     global $pdo;
+    $stmt = $pdo->prepare('SELECT text, `count` FROM `synonim_cache` ORDER BY count DESC');
+
+    $stmt->execute();
+    $total = $pdo->query('SELECT SUM(`count`) FROM `synonim_cache`')->fetchColumn();
+    $i = 1;
+
+    $out = "<b>Топ-5 запросов:</b>\n";
+    while ($row = $stmt->fetch()) {
+        $text = mb_strtolower($row->text);
+        $count = round($row->count * 100 / $total) . '%';
+        $out .= "{$i}: {$text} ({$count})\n";
+        $i++;
+        if ($i == 6) return $out;
+    }
+}
+
+
+function getStat_OLD()
+{
+    global $pdo;
     $stmt = $pdo->prepare('SELECT text,  `count` FROM `synonim_cache` order by count desc');
     
     $stmt->execute();
